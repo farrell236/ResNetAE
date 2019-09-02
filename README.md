@@ -28,7 +28,7 @@ model = ResNetAE(n_ResidualBlock=8,
   <img src="https://github.com/farrell236/ResNetAE/blob/master/architecture/encoder.png" alt="ResNetAE Encoder">
 </p>
 
-The encoder expects a 4-D Image Tensor in the form of ```[Batch x Height x Width x Channels]```. The output ```z``` would be of shape ```[Batch x Height/n_levels x Width/n_levels x z_dim]```.
+The encoder expects a 4-D Image Tensor in the form of ```[Batch x Height x Width x Channels]```. The output ```z``` would be of shape ```[Batch x Height/(2**n_levels) x Width/(2**n_levels) x z_dim]```.
 
 ```
 with tf.variable_scope('encoder'):
@@ -44,7 +44,7 @@ N.B. It is possible to flatten ```z``` by ```tf.layers.dense``` for a vectorised
   <img src="https://github.com/farrell236/ResNetAE/blob/master/architecture/decoder.png" alt="ResNetAE Decoder">
 </p>
 
-The decoder expects a 4-D Feature Tensor in the form of ```[Batch x Height x Width x Channels]```. The output ```x_out``` would be of the shape ```[Batch x Height*n_levels x Width*n_levels x output_channels]```
+The decoder expects a 4-D Feature Tensor in the form of ```[Batch x Height x Width x Channels]```. The output ```x_out``` would be of the shape ```[Batch x Height*(2**n_levels) x Width*(2**n_levels) x output_channels]```
 
 ```
 with tf.variable_scope('decoder'):
