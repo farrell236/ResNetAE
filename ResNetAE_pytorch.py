@@ -25,15 +25,15 @@ class ResidualBlock(torch.nn.Module):
         return x + self.residual_block(x)
 
 
-class ResNetAE_encoder(torch.nn.Module):
+class ResNetEncoder(torch.nn.Module):
     def __init__(self,
                  n_ResidualBlock=8,
                  n_levels=4,
                  input_ch=3,
-                 z_ch=10,
+                 z_dim=10,
                  bUseMultiResSkips=True):
 
-        super(ResNetAE_encoder, self).__init__()
+        super(ResNetEncoder, self).__init__()
 
         self.max_filters = 2 ** (n_levels+3)
         self.n_levels = n_levels
@@ -56,12 +56,14 @@ class ResNetAE_encoder(torch.nn.Module):
             ks = 2 ** (n_levels - i)
 
             self.res_blk_list.append(
-                torch.nn.Sequential(*[ResidualBlock(n_filters_1, n_filters_1) for _ in range(n_ResidualBlock)])
+                torch.nn.Sequential(*[ResidualBlock(n_filters_1, n_filters_1)
+                                      for _ in range(n_ResidualBlock)])
             )
 
             self.conv_list.append(
                 torch.nn.Sequential(
-                    torch.nn.Conv2d(n_filters_1, n_filters_2, kernel_size=(2, 2), stride=(2, 2), padding=0),
+                    torch.nn.Conv2d(n_filters_1, n_filters_2,
+                                    kernel_size=(2, 2), stride=(2, 2), padding=0),
                     torch.nn.BatchNorm2d(n_filters_2),
                     torch.nn.ReLU(inplace=True),
                 )
@@ -78,9 +80,9 @@ class ResNetAE_encoder(torch.nn.Module):
                 )
 
         self.output_conv = torch.nn.Sequential(
-            torch.nn.Conv2d(in_channels=self.max_filters, out_channels=z_ch,
+            torch.nn.Conv2d(in_channels=self.max_filters, out_channels=z_dim,
                             kernel_size=(3, 3), stride=(1, 1), padding=1),
-            torch.nn.BatchNorm2d(z_ch),
+            torch.nn.BatchNorm2d(z_dim),
             torch.nn.ReLU(inplace=True),
         )
 
@@ -103,15 +105,15 @@ class ResNetAE_encoder(torch.nn.Module):
         return x
 
 
-class ResNetAE_decoder(torch.nn.Module):
+class ResNetDecoder(torch.nn.Module):
     def __init__(self,
                  n_ResidualBlock=8,
                  n_levels=4,
-                 z_ch=10,
-                 output_ch=3,
+                 z_dim=10,
+                 output_channels=3,
                  bUseMultiResSkips=True):
 
-        super(ResNetAE_decoder, self).__init__()
+        super(ResNetDecoder, self).__init__()
 
         self.max_filters = 2 ** (n_levels+3)
         self.n_levels = n_levels
@@ -122,7 +124,7 @@ class ResNetAE_decoder(torch.nn.Module):
         self.multi_res_skip_list = []
 
         self.input_conv = torch.nn.Sequential(
-            torch.nn.Conv2d(in_channels=z_ch, out_channels=self.max_filters,
+            torch.nn.Conv2d(in_channels=z_dim, out_channels=self.max_filters,
                             kernel_size=(3, 3), stride=(1, 1), padding=1),
             torch.nn.BatchNorm2d(self.max_filters),
             torch.nn.ReLU(inplace=True),
@@ -134,7 +136,8 @@ class ResNetAE_decoder(torch.nn.Module):
             ks = 2 ** (i + 1)
 
             self.res_blk_list.append(
-                torch.nn.Sequential(*[ResidualBlock(n_filters_1, n_filters_1) for _ in range(n_ResidualBlock)])
+                torch.nn.Sequential(*[ResidualBlock(n_filters_1, n_filters_1)
+                                      for _ in range(n_ResidualBlock)])
             )
 
             self.conv_list.append(
@@ -157,9 +160,9 @@ class ResNetAE_decoder(torch.nn.Module):
                 )
 
         self.output_conv = torch.nn.Sequential(
-            torch.nn.Conv2d(in_channels=n_filters_1, out_channels=output_ch,
+            torch.nn.Conv2d(in_channels=n_filters_1, out_channels=output_channels,
                             kernel_size=(3, 3), stride=(1, 1), padding=1),
-            torch.nn.BatchNorm2d(output_ch),
+            torch.nn.BatchNorm2d(output_channels),
             torch.nn.ReLU(inplace=True),
         )
 
@@ -182,8 +185,8 @@ class ResNetVAE(torch.nn.Module):
     def __init__(self):
         super(ResNetVAE, self).__init__()
 
-        self.encoder = ResNetAE_encoder()
-        self.decoder = ResNetAE_decoder()
+        self.encoder = ResNetEncoder()
+        self.decoder = ResNetDecoder()
 
         # Assumes the input to be of shape 256x256
         z_dim = 20
@@ -212,8 +215,8 @@ class ResNetVAE(torch.nn.Module):
 
 if __name__ == '__main__':
 
-    encoder = ResNetAE_encoder()
-    decoder = ResNetAE_decoder()
+    encoder = ResNetEncoder()
+    decoder = ResNetDecoder()
 
     test_input = torch.rand(10, 3, 256, 256)
     out = encoder(test_input)
