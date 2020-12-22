@@ -181,22 +181,70 @@ class ResNetDecoder(torch.nn.Module):
         return z
 
 
-class ResNetVAE(torch.nn.Module):
-    def __init__(self):
-        super(ResNetVAE, self).__init__()
+class ResNetAE(torch.nn.Module):
+    def __init__(self,
+                 input_shape=(256, 256, 3),
+                 n_ResidualBlock=8,
+                 n_levels=4,
+                 z_dim=128,
+                 bottleneck_dim=128,
+                 bUseMultiResSkips=True):
+        super(ResNetAE, self).__init__()
 
-        self.encoder = ResNetEncoder()
-        self.decoder = ResNetDecoder()
+        assert input_shape[0] == input_shape[1]
+        image_channels = input_shape[2]
+        self.z_dim = z_dim
+        self.img_latent_dim = input_shape[0] // (2 ** n_levels)
 
-        # Assumes the input to be of shape 256x256
-        z_dim = 20
-        self.fc21 = torch.nn.Linear(2560, z_dim)
-        self.fc22 = torch.nn.Linear(2560, z_dim)
-        self.fc3 = torch.nn.Linear(z_dim, 2560)
+        self.encoder = ResNetEncoder(n_ResidualBlock=n_ResidualBlock, n_levels=n_levels,
+                                     input_ch=image_channels, z_dim=z_dim, bUseMultiResSkips=bUseMultiResSkips)
+        self.decoder = ResNetDecoder(n_ResidualBlock=n_ResidualBlock, n_levels=n_levels,
+                                     output_channels=image_channels, z_dim=z_dim, bUseMultiResSkips=bUseMultiResSkips)
+
+        self.fc1 = torch.nn.Linear(self.z_dim * self.img_latent_dim * self.img_latent_dim, bottleneck_dim)
+        self.fc2 = torch.nn.Linear(bottleneck_dim, self.z_dim * self.img_latent_dim * self.img_latent_dim)
 
     def encode(self, x):
-        h1 = self.encoder(x) # h1 should be batch 10*16*16
-        return self.fc21(h1.view(-1, 2560)), self.fc22(h1.view(-1, 2560))
+        h = self.encoder(x)
+        return self.fc1(h.view(-1, self.z_dim * self.img_latent_dim * self.img_latent_dim))
+
+    def decode(self, z):
+        h = self.decoder(self.fc2(z).view(-1, self.z_dim, self.img_latent_dim, self.img_latent_dim))
+        return torch.sigmoid(h)
+
+    def forward(self, x):
+        return self.decode(self.encode(x))
+
+
+class ResNetVAE(torch.nn.Module):
+    def __init__(self,
+                 input_shape=(256, 256, 3),
+                 n_ResidualBlock=8,
+                 n_levels=4,
+                 z_dim=128,
+                 bottleneck_dim=128,
+                 bUseMultiResSkips=True):
+        super(ResNetVAE, self).__init__()
+
+        assert input_shape[0] == input_shape[1]
+        image_channels = input_shape[2]
+        self.z_dim = z_dim
+        self.img_latent_dim = input_shape[0] // (2 ** n_levels)
+
+        self.encoder = ResNetEncoder(n_ResidualBlock=n_ResidualBlock, n_levels=n_levels,
+                                     input_ch=image_channels, z_dim=z_dim, bUseMultiResSkips=bUseMultiResSkips)
+        self.decoder = ResNetDecoder(n_ResidualBlock=n_ResidualBlock, n_levels=n_levels,
+                                     output_channels=image_channels, z_dim=z_dim, bUseMultiResSkips=bUseMultiResSkips)
+
+        # Assumes the input to be of shape 256x256
+        self.fc21 = torch.nn.Linear(self.z_dim * self.img_latent_dim * self.img_latent_dim, bottleneck_dim)
+        self.fc22 = torch.nn.Linear(self.z_dim * self.img_latent_dim * self.img_latent_dim, bottleneck_dim)
+        self.fc3 = torch.nn.Linear(bottleneck_dim, self.z_dim * self.img_latent_dim * self.img_latent_dim)
+
+    def encode(self, x):
+        h1 = self.encoder(x)
+        return self.fc21(h1.view(-1, self.z_dim * self.img_latent_dim * self.img_latent_dim)), \
+               self.fc22(h1.view(-1, self.z_dim * self.img_latent_dim * self.img_latent_dim))
 
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5*logvar)
@@ -204,7 +252,7 @@ class ResNetVAE(torch.nn.Module):
         return mu + eps*std
 
     def decode(self, z):
-        h3 = self.decoder(self.fc3(z).view(-1, 10, 16, 16))
+        h3 = self.decoder(self.fc3(z).view(-1, self.z_dim, self.img_latent_dim, self.img_latent_dim))
         return torch.sigmoid(h3)
 
     def forward(self, x):
@@ -223,3 +271,15 @@ if __name__ == '__main__':
 
     test_input = torch.rand(10, 10, 16, 16)
     out = decoder(test_input)
+
+    a=1
+
+    ae = ResNetAE()
+    out = ae(torch.rand(10, 3, 256, 256))
+
+    a=1
+
+    vae = ResNetVAE()
+    out = vae(torch.rand(10, 3, 256, 256))
+
+    a=1

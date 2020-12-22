@@ -179,7 +179,13 @@ class ResNetDecoder(tf.keras.models.Model):
 
 
 class ResNetAE(tf.keras.models.Model):
-    def __init__(self, input_shape=(256, 256, 3), n_ResidualBlock=8, n_levels=4, z_dim=128, bUseMultiResSkips=True):
+    def __init__(self,
+                 input_shape=(256, 256, 3),
+                 n_ResidualBlock=8,
+                 n_levels=4,
+                 z_dim=128,
+                 bottleneck_dim=128,
+                 bUseMultiResSkips=True):
         super(ResNetAE, self).__init__()
 
         assert input_shape[0] == input_shape[1]
@@ -192,7 +198,7 @@ class ResNetAE(tf.keras.models.Model):
         self.decoder = ResNetDecoder(n_ResidualBlock=n_ResidualBlock, n_levels=n_levels,
                                      output_channels=output_channels, bUseMultiResSkips=bUseMultiResSkips)
 
-        self.fc1 = tf.keras.layers.Dense(self.z_dim)
+        self.fc1 = tf.keras.layers.Dense(bottleneck_dim)
         self.fc2 = tf.keras.layers.Dense(self.img_latent_dim * self.img_latent_dim * self.z_dim)
 
     def encode(self, x):
@@ -211,7 +217,13 @@ class ResNetAE(tf.keras.models.Model):
 
 
 class ResNetVAE(tf.keras.models.Model):
-    def __init__(self, input_shape=(256, 256, 3), n_ResidualBlock=8, n_levels=4, z_dim=128, bUseMultiResSkips=True):
+    def __init__(self,
+                 input_shape=(256, 256, 3),
+                 n_ResidualBlock=8,
+                 n_levels=4,
+                 z_dim=128,
+                 bottleneck_dim=128,
+                 bUseMultiResSkips=True):
         super(ResNetVAE, self).__init__()
 
         assert input_shape[0] == input_shape[1]
@@ -226,12 +238,12 @@ class ResNetVAE(tf.keras.models.Model):
 
 
         # Assumes the input to be of shape 256x256
-        self.fc21 = tf.keras.layers.Dense(self.z_dim)
-        self.fc22 = tf.keras.layers.Dense(self.z_dim)
+        self.fc21 = tf.keras.layers.Dense(bottleneck_dim)
+        self.fc22 = tf.keras.layers.Dense(bottleneck_dim)
         self.fc3 = tf.keras.layers.Dense(self.img_latent_dim * self.img_latent_dim * self.z_dim)
 
     def encode(self, x):
-        h1 = self.encoder(x) # h1 should be batch 10*16*16
+        h1 = self.encoder(x)
         h1 = tf.keras.backend.reshape(h1, shape=(-1, self.img_latent_dim * self.img_latent_dim * self.z_dim))
         return self.fc21(h1), self.fc22(h1)
 
@@ -261,6 +273,11 @@ if __name__ == '__main__':
     #
     # out_encoder = encoder(np.random.rand(10, 256, 256, 3).astype('float32'))
     # out_decoder = decoder(np.random.rand(10, 16, 16, 10).astype('float32'))
+
+    a=1
+
+    ae = ResNetAE()
+    out = ae(np.random.rand(10, 256, 256, 3).astype('float32'))
 
     a=1
 
