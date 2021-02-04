@@ -11,14 +11,14 @@ class ResidualBlock(torch.nn.Module):
         super(ResidualBlock, self).__init__()
 
         self.residual_block = torch.nn.Sequential(
+            torch.nn.Conv2d(in_channels=in_channels, out_channels=out_channels, 
+                            kernel_size=kernel_size, stride=stride, padding=1),
             torch.nn.BatchNorm2d(in_channels),
             torch.nn.ReLU(inplace=True),
-            torch.nn.Conv2d(in_channels=in_channels, out_channels=out_channels,
+            torch.nn.Conv2d(in_channels=out_channels, out_channels=out_channels, 
                             kernel_size=kernel_size, stride=stride, padding=1),
             torch.nn.BatchNorm2d(out_channels),
             torch.nn.ReLU(inplace=True),
-            torch.nn.Conv2d(in_channels=out_channels, out_channels=out_channels,
-                            kernel_size=kernel_size, stride=stride, padding=1)
         )
 
     def forward(self, x):
@@ -39,9 +39,9 @@ class ResNetEncoder(torch.nn.Module):
         self.n_levels = n_levels
         self.bUseMultiResSkips = bUseMultiResSkips
 
-        self.conv_list = []
-        self.res_blk_list = []
-        self.multi_res_skip_list = []
+        self.conv_list = torch.nn.ModuleList()
+        self.res_blk_list = torch.nn.ModuleList()
+        self.multi_res_skip_list = torch.nn.ModuleList()
 
         self.input_conv = torch.nn.Sequential(
             torch.nn.Conv2d(in_channels=input_ch, out_channels=8,
@@ -119,9 +119,9 @@ class ResNetDecoder(torch.nn.Module):
         self.n_levels = n_levels
         self.bUseMultiResSkips = bUseMultiResSkips
 
-        self.conv_list = []
-        self.res_blk_list = []
-        self.multi_res_skip_list = []
+        self.conv_list = torch.nn.ModuleList()
+        self.res_blk_list = torch.nn.ModuleList()
+        self.multi_res_skip_list = torch.nn.ModuleList()
 
         self.input_conv = torch.nn.Sequential(
             torch.nn.Conv2d(in_channels=z_dim, out_channels=self.max_filters,
@@ -162,8 +162,8 @@ class ResNetDecoder(torch.nn.Module):
         self.output_conv = torch.nn.Sequential(
             torch.nn.Conv2d(in_channels=n_filters_1, out_channels=output_channels,
                             kernel_size=(3, 3), stride=(1, 1), padding=1),
-            torch.nn.BatchNorm2d(output_channels),
-            torch.nn.ReLU(inplace=True),
+            # torch.nn.BatchNorm2d(output_channels),
+            # torch.nn.ReLU(inplace=True),
         )
 
     def forward(self, z):
