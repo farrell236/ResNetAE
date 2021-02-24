@@ -59,6 +59,8 @@ decoder = ResNetDecoder(n_ResidualBlock=8,
 
 The Residual Block uses the [Full pre-activation ResNet Residual block](https://arxiv.org/pdf/1603.05027.pdf) by He et al.
 
+TODO: implementation changed to Conv-Batch-Relu, update figure
+
 <p align="center">
   <img src="https://github.com/farrell236/ResNetAE/blob/master/architecture/residual_block.png" alt="ResNetAE Residual Block">
 </p>
