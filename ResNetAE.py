@@ -273,10 +273,6 @@ class VectorQuantizer(tf.keras.layers.Layer):
             initializer(shape=[self.embedding_dim, self.num_embeddings]), trainable=True
         )
 
-        # TODO: update
-        # self.embedding = tf.keras.layers.Embedding(self.embedding_dim, self.num_embeddings,
-        #                                            embeddings_initializer=initializer)
-
     def call(self, x, **kwargs):
 
         flat_x = tf.reshape(x, [-1, self.embedding_dim])
@@ -313,9 +309,9 @@ class ResNetVQVAE(tf.keras.models.Model):
                  n_ResidualBlock=8,
                  n_levels=4,
                  z_dim=128,
-                 vq_num_embeddings=128,
-                 vq_embedding_dim=128,
-                 vq_commiment_cost=128,
+                 vq_num_embeddings=512,
+                 vq_embedding_dim=64,
+                 vq_commiment_cost=0.25,
                  bUseMultiResSkips=True):
         super(ResNetVQVAE, self).__init__()
 
