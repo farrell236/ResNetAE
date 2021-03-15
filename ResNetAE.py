@@ -285,7 +285,7 @@ class VectorQuantizer(tf.keras.layers.Layer):
 
         encoding_indices = tf.math.argmax(-distances, axis=1)
         encodings = tf.one_hot(encoding_indices, self.num_embeddings)
-        # encoding_indices = tf.reshape(encoding_indices, tf.shape(x)[:-1])
+        encoding_indices = tf.reshape(encoding_indices, tf.shape(x)[:-1])
         quantized = tf.linalg.matmul(encodings, tf.transpose(self.embedding))
         quantized = tf.reshape(quantized, x.shape)
 
@@ -300,7 +300,14 @@ class VectorQuantizer(tf.keras.layers.Layer):
             -tf.math.reduce_sum(avg_probs * tf.math.log(avg_probs + 1e-10))
         )
 
-        return loss, quantized, perplexity, encodings
+        return loss, quantized, perplexity, encoding_indices
+
+    def quantize_encoding(self, x):
+        encoding_indices = tf.keras.backend.flatten(x)
+        encodings = tf.one_hot(encoding_indices, self.num_embeddings)
+        quantized = tf.linalg.matmul(encodings, tf.transpose(self.embedding))
+        quantized = tf.reshape(quantized, [-1] + x.shape[1:].as_list() + [self.embedding_dim])
+        return quantized
 
 
 class ResNetVQVAE(tf.keras.models.Model):
@@ -335,7 +342,7 @@ class ResNetVQVAE(tf.keras.models.Model):
         x = self.pre_vq_conv(x)
         loss, quantized, perplexity, encodings = self.vq_vae(x)
         x_recon = self.decoder(quantized)
-        return loss, x_recon, perplexity
+        return loss, x_recon, perplexity, encodings
 
 
 if __name__ == '__main__':

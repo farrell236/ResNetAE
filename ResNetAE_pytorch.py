@@ -264,8 +264,9 @@ class VectorQuantizer(torch.nn.Module):
         self.num_embeddings = num_embeddings
         self.commiment_cost = commiment_cost
 
-        self.embedding = torch.nn.Embedding(self.embedding_dim, self.num_embeddings)
-        torch.nn.init.kaiming_uniform_(self.embedding)
+        self.embedding = torch.tensor(
+            torch.randn(self.embedding_dim, self.num_embeddings),
+            requires_grad=True)
 
     def forward(self, x):
 
@@ -279,8 +280,8 @@ class VectorQuantizer(torch.nn.Module):
 
         encoding_indices = torch.argmax(-distances, dim=1)
         encodings = torch.eye(self.num_embeddings)[encoding_indices]
-        # encoding_indices = tf.reshape(encoding_indices, tf.shape(x)[:-1])
-        quantized = torch.matmul(encodings, torch.transpose(self.embedding))
+        encoding_indices = torch.reshape(encoding_indices, x.shape[:1] + x.shape[2:])
+        quantized = torch.matmul(encodings, torch.transpose(self.embedding, 0, 1))
         quantized = torch.reshape(quantized, x.shape)
 
         e_latent_loss = torch.mean((quantized.detach() - x) ** 2)
@@ -294,30 +295,37 @@ class VectorQuantizer(torch.nn.Module):
             -torch.sum(avg_probs * torch.log(avg_probs + 1e-10))
         )
 
-        return loss, quantized, perplexity, encodings
+        return loss, quantized, perplexity, encoding_indices
+
+    def quantize_encoding(self, x):
+        encoding_indices = torch.flatten(x)
+        encodings = torch.eye(self.num_embeddings)[encoding_indices]
+        quantized = torch.matmul(encodings, torch.transpose(self.embedding, 0, 1))
+        quantized = torch.reshape(quantized, torch.Size([-1, self.embedding_dim]) + x.shape[1:])
+        return quantized
 
 
 class ResNetVQVAE(torch.nn.Module):
     def __init__(self,
-                 input_shape=(256, 256, 3),
+                 input_shape=(3, 256, 256),
                  n_ResidualBlock=8,
                  n_levels=4,
                  z_dim=128,
-                 vq_num_embeddings=128,
-                 vq_embedding_dim=128,
-                 vq_commiment_cost=128,
+                 vq_num_embeddings=512,
+                 vq_embedding_dim=64,
+                 vq_commiment_cost=0.25,
                  bUseMultiResSkips=True):
         super(ResNetVQVAE, self).__init__()
 
-        assert input_shape[0] == input_shape[1]
-        output_channels = input_shape[2]
+        assert input_shape[1] == input_shape[2]
+        image_channels = input_shape[0]
         self.z_dim = z_dim
         self.img_latent_dim = input_shape[0] // (2 ** n_levels)
 
         self.encoder = ResNetEncoder(n_ResidualBlock=n_ResidualBlock, n_levels=n_levels,
-                                     z_dim=z_dim, bUseMultiResSkips=bUseMultiResSkips)
+                                     input_ch=image_channels, z_dim=self.z_dim, bUseMultiResSkips=bUseMultiResSkips)
         self.decoder = ResNetDecoder(n_ResidualBlock=n_ResidualBlock, n_levels=n_levels,
-                                     output_channels=output_channels, bUseMultiResSkips=bUseMultiResSkips)
+                                     output_channels=image_channels, z_dim=vq_embedding_dim, bUseMultiResSkips=bUseMultiResSkips)
 
         self.vq_vae = VectorQuantizer(num_embeddings=vq_num_embeddings,
                                       embedding_dim=vq_embedding_dim,
@@ -325,12 +333,12 @@ class ResNetVQVAE(torch.nn.Module):
         self.pre_vq_conv = torch.nn.Conv2d(in_channels=self.z_dim, out_channels=vq_embedding_dim,
                                            kernel_size=(1, 1), stride=(1, 1))
 
-    def foward(self, x):
+    def forward(self, x):
         x = self.encoder(x)
         x = self.pre_vq_conv(x)
         loss, quantized, perplexity, encodings = self.vq_vae(x)
         x_recon = self.decoder(quantized)
-        return loss, x_recon, perplexity
+        return loss, x_recon, perplexity, encodings
 
 
 if __name__ == '__main__':

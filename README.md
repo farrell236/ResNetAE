@@ -66,5 +66,16 @@ TODO: implementation changed to Conv-Batch-Relu, update figure
 </p>
 
 
+## 
 
+If you find this work useful for your research, please cite:
+
+```
+@article{ResNetAE, 
+  Title={{R}es{N}et{AE}-https://github.com/farrell236/ResNetAE}, 
+  url={https://github.com/farrell236/ResNetAE},  
+  Author={Hou, Benjamin}, 
+  Year={2019}
+}
+```
 
