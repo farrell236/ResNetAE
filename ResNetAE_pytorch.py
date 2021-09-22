@@ -264,8 +264,8 @@ class VectorQuantizer(torch.nn.Module):
         self.num_embeddings = num_embeddings
         self.commiment_cost = commiment_cost
 
-        self.embedding = torch.tensor(
-            torch.randn(self.embedding_dim, self.num_embeddings),
+        self.embedding = torch.nn.parameter.Parameter(torch.tensor(
+            torch.randn(self.embedding_dim, self.num_embeddings)),
             requires_grad=True)
 
     def forward(self, x):
@@ -279,7 +279,7 @@ class VectorQuantizer(torch.nn.Module):
         )
 
         encoding_indices = torch.argmax(-distances, dim=1)
-        encodings = torch.eye(self.num_embeddings)[encoding_indices]
+        encodings = (torch.eye(self.num_embeddings)[encoding_indices]).to(x.device)
         encoding_indices = torch.reshape(encoding_indices, x.shape[:1] + x.shape[2:])
         quantized = torch.matmul(encodings, torch.transpose(self.embedding, 0, 1))
         quantized = torch.reshape(quantized, x.shape)
